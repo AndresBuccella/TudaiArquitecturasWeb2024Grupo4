@@ -8,17 +8,27 @@ import org.apache.commons.csv.CSVFormat;
 import org.apache.commons.csv.CSVParser;
 import org.apache.commons.csv.CSVRecord;
 
-import java.io.FileReader;
-import java.io.IOException;
+import java.io.*;
+import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.logging.Level;
+import java.util.logging.Logger;
 
 public class CSVreader {
+    private static final Logger logger = Logger.getLogger(CSVreader.class.getName());
     public List<Cliente> leerArchivoClientes() {
         List<Cliente> clientes = new ArrayList<>();
-        String csvFile = ".\\src\\main\\resources\\csv_files\\clientes.csv";
-
-        try (CSVParser parser = CSVFormat.DEFAULT.withHeader().parse(new FileReader(csvFile))) {
+        InputStream inputStream = getClass().getClassLoader().getResourceAsStream("csv_files/clientes.csv");
+        if (inputStream == null) {
+            System.err.println("No se encontró el archivo CSV en la carpeta resources.");
+            return clientes;
+        }
+        CSVFormat formatoCsv = CSVFormat.DEFAULT.builder()
+                .setHeader()
+                .build();
+        try (Reader reader = new InputStreamReader(inputStream, StandardCharsets.UTF_8);
+             CSVParser parser = formatoCsv.parse(reader)) {
             for (CSVRecord row : parser) {
                 Cliente c = new Cliente(
                         Integer.parseInt(row.get("idCliente")),
@@ -26,9 +36,10 @@ public class CSVreader {
                         row.get("email"));
                 clientes.add(c);
             }
-            System.out.println("ok");
+            logger.info("Archivo CSV leído correctamente.");
+            System.out.println("Archivo CSV clientes.csv leído correctamente.");
         } catch (IOException e) {
-            e.printStackTrace();
+            logger.log(Level.SEVERE, "Error de entrada/salida al procesar el CSV", e);
         }
         return clientes;
     }
@@ -53,7 +64,7 @@ public class CSVreader {
 
     public List<FacturaProducto> leerArchivoFacturasProductos() {
         List<FacturaProducto> facturas_productos = new ArrayList<>();
-        String csvFile = ".\\src\\main\\resources\\csv_files\\facturas-productos.csv";
+        String csvFile = ".\\resources\\csv_files\\facturas-productos.csv";
 
         try (CSVParser parser = CSVFormat.DEFAULT.withHeader().parse(new FileReader(csvFile))) {
             for (CSVRecord row : parser) {
