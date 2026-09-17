@@ -12,6 +12,40 @@ import java.sql.SQLException;
 import java.util.ArrayList;
 import java.util.List;
 
+/*
+ * =====================================================================================
+ * SUGERENCIAS DE MEJORA Y EFICIENCIA (ProductoDAO):
+ * =====================================================================================
+ * 1. Optimización de la Consulta 'obtenerProductoMayorRecaudacion()':
+ *    - La consulta calcula 'SUM(fp.cantidad * p.valor) AS recaudacion' dentro de la agregación.
+ *      Como 'p.valor' es un atributo fijo por cada 'p.idProducto', multiplicar en cada fila
+ *      individual antes de la suma agrega costo de CPU redundante en el motor de base de datos.
+ *    - Mejora matemática: Utilizar 'p.valor * SUM(fp.cantidad) AS recaudacion'.
+ *    - Mejora de Plan de Ejecución (Subconsulta / Pre-agregación):
+ *      Hacer el JOIN de toda la tabla 'Producto' con 'Factura_Producto' previo a agrupar
+ *      produce un conjunto intermedio grande. Se puede obtener primero el 'idProducto' con
+ *      mayor facturación calculada desde 'Factura_Producto' (o una tabla derivada) y luego
+ *      hacer un JOIN simple de 1 fila contra 'Producto', aprovechando un índice covering en
+ *      'Factura_Producto(idProducto, cantidad)'.
+ *
+ * 2. Gestión de Conexiones y Connection Pooling:
+ *    - Invocar 'conn.close()' destruye la conexión singleton, forzando la apertura de un
+ *      nuevo socket TCP en la siguiente llamada. Debe sustituirse por un pool como HikariCP.
+ *
+ * 3. Inserción Masiva en Lote (Batch Processing):
+ *    - Para la inserción de múltiples productos, implementar 'insertBatch(List<Producto>)'
+ *      con 'addBatch()' / 'executeBatch()' y un único commit.
+ *
+ * 4. Corrección Crítica en 'select(int id)':
+ *    - 'ps.executeQuery()' se declara en el try-with-resources antes de asignar 'ps.setInt(1, id)'
+ *      y no se verifica 'rs.next()'.
+ *
+ * 5. Tipos de Datos y Casting en 'update':
+ *    - 'ps.setDouble(2, p.getValor())' realiza una conversión implícita de 'float' a 'double'.
+ *      Se debe utilizar 'ps.setFloat(2, p.getValor())' o preferentemente migrar a 'BigDecimal'
+ *      o 'double' para valores monetarios tanto en Java como en MySQL ('DECIMAL(10,2)').
+ * =====================================================================================
+ */
 // Patrón Singleton
 public class ProductoDAO implements DAO<Producto> {
     private static ProductoDAO unicaInstancia;
@@ -50,6 +84,8 @@ public class ProductoDAO implements DAO<Producto> {
     public void createTable() throws SQLException {
         Connection conn = MySqlConnectionFactory.getInstance().getConnection();
 
+        // Sugerencia de precisión/eficiencia: Para montos monetarios, 'valor DECIMAL(10,2)' es
+        // preferible a 'FLOAT' para evitar imprecisiones de redondeo en cálculos agregados.
         String table = "CREATE TABLE IF NOT EXISTS Producto(" +
                 "idProducto INT," +
                 "nombre VARCHAR(45)," +
@@ -74,7 +110,8 @@ public class ProductoDAO implements DAO<Producto> {
 
         String query = "INSERT INTO Producto(idProducto, nombre, valor) VALUES (?, ?, ?)";
 
-        // try-with-resources asegura que PreparedStatement y ResultSet se cierren automáticamente
+        // Sugerencia de eficiencia: Implementar inserción en batch ('insertBatch') para evitar
+        // commits y round-trips individuales por cada producto.
         try (PreparedStatement ps = conn.prepareStatement(query)) {
             ps.setInt(1, p.getIdProducto());
             ps.setString(2, p.getNombre());
@@ -94,9 +131,12 @@ public class ProductoDAO implements DAO<Producto> {
         Connection conn = MySqlConnectionFactory.getInstance().getConnection();
 
         Producto p = null;
+        // Sugerencia de eficiencia: Proyectar columnas explícitas en lugar de 'SELECT *'
         String query = "SELECT * FROM Producto WHERE idProducto=?";
 
-        // try-with-resources asegura que PreparedStatement y ResultSet se cierren automáticamente
+        // NOTA / SUGERENCIA DE CORRECCIÓN:
+        // 'ps.executeQuery()' se ejecuta antes de setear el parámetro y no se llama a 'rs.next()'.
+        // Debe reestructurarse con parámetros configurados antes de la ejecución.
         try (PreparedStatement ps = conn.prepareStatement(query); ResultSet rs = ps.executeQuery()) {
             ps.setInt(1, id);
 
@@ -114,6 +154,7 @@ public class ProductoDAO implements DAO<Producto> {
     public List<Producto> selectAll () throws SQLException {
         Connection conn = MySqlConnectionFactory.getInstance().getConnection();
 
+        // Sugerencia de eficiencia: Pre-asignar capacidad inicial en el ArrayList
         List<Producto> productos = new ArrayList<>();
         String query = "SELECT * FROM Producto";
 
@@ -140,6 +181,7 @@ public class ProductoDAO implements DAO<Producto> {
         // try-with-resources asegura que PreparedStatement y ResultSet se cierren automáticamente
         try (PreparedStatement ps = conn.prepareStatement(query)) {
             ps.setString(1, p.getNombre());
+            // Sugerencia: Usar setFloat si el atributo es float o migrar consistentemente a double/BigDecimal
             ps.setDouble(2, p.getValor());
             ps.setInt(3, p.getIdProducto());
 
@@ -181,6 +223,11 @@ public class ProductoDAO implements DAO<Producto> {
         Connection conn = MySqlConnectionFactory.getInstance().getConnection();
 
         ProductoMayorRecaudacionDTO productoMayorRecaudacion = null;
+        // Sugerencia de eficiencia (Cálculo SQL y Covering Index):
+        // 1. Reemplazar 'SUM(fp.cantidad * p.valor)' por 'p.valor * SUM(fp.cantidad)' evita
+        //    multiplicar en cada fila antes de agregar.
+        // 2. Un índice en 'Factura_Producto(idProducto, cantidad)' permite a MySQL computar
+        //    la suma directamente en el índice (Using index).
         String query = "SELECT p.idProducto, p.nombre, p.valor, "
                 + "SUM(fp.cantidad * p.valor) AS recaudacion "
                 + "FROM Producto p "

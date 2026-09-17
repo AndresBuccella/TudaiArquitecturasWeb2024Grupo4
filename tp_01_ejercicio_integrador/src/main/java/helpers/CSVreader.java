@@ -15,8 +15,41 @@ import java.util.List;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 
+/*
+ * =====================================================================================
+ * SUGERENCIAS DE MEJORA Y EFICIENCIA (CSVreader):
+ * =====================================================================================
+ * 1. Consumo de Memoria Heap y Falta de Streaming / Ingesta por Lotes:
+ *    - Cada método lee el archivo CSV completo e instancia y almacena la totalidad de las entidades
+ *      en una lista 'ArrayList<T>' en memoria heap.
+ *    - Impacto en Eficiencia: Con datasets grandes (cientos de miles o millones de registros),
+ *      retener todas las entidades simultáneamente provoca alta presión en el Garbage Collector y
+ *      riesgo de 'OutOfMemoryError'.
+ *    - Solución recomendada: Procesar en Streaming o mediante un patrón productor-consumidor
+ *      (ej. procesar y cargar en la base de datos en bloques de 1.000 registros mediante un 'Consumer<T>'
+ *      o 'Iterator<T>'), descartando los objetos ya persistidos para mantener constante el uso de RAM.
+ *
+ * 2. Optimización de Entrada/Salida con 'BufferedReader':
+ *    - Se utiliza directamente 'InputStreamReader' sin envoltorio de buffer.
+ *    - Envolver el flujo en 'new BufferedReader(new InputStreamReader(inputStream, StandardCharsets.UTF_8))'
+ *      reduce significativamente las llamadas al sistema operativo al leer bloques de memoria (ej. 8KB)
+ *      en lugar de fragmentos pequeños de caracteres.
+ *
+ * 3. Acceso por Nombre de Columna vs Acceso por Índice en 'CSVRecord':
+ *    - 'row.get("idCliente")' ejecuta una búsqueda por hash/string en el mapa de headers en cada fila.
+ *    - En archivos voluminosos, acceder por posición ordinal ('row.get(0)', 'row.get(1)') o cachear
+ *      los índices previamente ahorra millones de operaciones de hashing y comparaciones de cadenas.
+ *
+ * 4. Eliminación de Código Redundante (Principio DRY):
+ *    - Los cuatro métodos repiten exactamente la misma lógica de lectura y parseo.
+ *      Se sugiere unificar en un método genérico parametrizado:
+ *      'private <T> List<T> leerArchivo(String fileName, Function<CSVRecord, T> mapper)'
+ *      lo que facilita aplicar optimizaciones de I/O de manera centralizada.
+ * =====================================================================================
+ */
 public class CSVreader {
     private static final Logger logger = Logger.getLogger(CSVreader.class.getName());
+
     public List<Cliente> leerArchivoClientes() {
         List<Cliente> clientes = new ArrayList<>();
         String fileName = "clientes.csv";
@@ -28,7 +61,9 @@ public class CSVreader {
         CSVFormat formatoCsv = CSVFormat.DEFAULT.builder()
                 .setHeader()
                 .build();
-        try (Reader reader = new InputStreamReader(inputStream, StandardCharsets.UTF_8);
+
+        // Sugerencia de eficiencia: Envolver en 'new BufferedReader(...)' y acceder por índice numérico
+        try (Reader reader = new BufferedReader(new InputStreamReader(inputStream, StandardCharsets.UTF_8));
              CSVParser parser = formatoCsv.parse(reader)) {
             for (CSVRecord row : parser) {
                 Cliente c = new Cliente(
@@ -55,7 +90,9 @@ public class CSVreader {
         CSVFormat formatoCsv = CSVFormat.DEFAULT.builder()
                 .setHeader()
                 .build();
-        try (Reader reader = new InputStreamReader(inputStream, StandardCharsets.UTF_8);
+
+        // Sugerencia de eficiencia: Usar BufferedReader para amortiguar operaciones de lectura I/O
+        try (Reader reader = new BufferedReader(new InputStreamReader(inputStream, StandardCharsets.UTF_8));
              CSVParser parser = formatoCsv.parse(reader)) {
             for (CSVRecord row : parser) {
                 Factura f = new Factura(
@@ -82,7 +119,8 @@ public class CSVreader {
                 .setHeader()
                 .build();
 
-        try (Reader reader = new InputStreamReader(inputStream, StandardCharsets.UTF_8);
+        // Sugerencia de eficiencia: Al tener 2590+ filas, el uso de BufferedReader y acceso por índice es clave
+        try (Reader reader = new BufferedReader(new InputStreamReader(inputStream, StandardCharsets.UTF_8));
              CSVParser parser = formatoCsv.parse(reader)) {
             for (CSVRecord row : parser) {
                 FacturaProducto fp = new FacturaProducto(
@@ -111,8 +149,8 @@ public class CSVreader {
                 .setHeader()
                 .build();
 
-
-        try (Reader reader = new InputStreamReader(inputStream, StandardCharsets.UTF_8);
+        // Sugerencia de eficiencia: Usar BufferedReader para amortiguar lecturas
+        try (Reader reader = new BufferedReader(new InputStreamReader(inputStream, StandardCharsets.UTF_8));
              CSVParser parser = formatoCsv.parse(reader)) {
             for (CSVRecord row : parser) {
                 Producto p = new Producto(
