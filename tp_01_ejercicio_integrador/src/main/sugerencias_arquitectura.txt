@@ -1,0 +1,169 @@
+====================================================================================================
+INFORME DE SUGERENCIAS DE ARQUITECTURA, DISEÑO Y OPTIMIZACIONES FUERA DE CÓDIGO
+Proyecto: TP 01 - Ejercicio Integrador (Módulo src/main)
+Enfoque: Eficiencia, Escalabilidad, Rendimiento de Base de Datos y Buenas Prácticas
+====================================================================================================
+
+1. ARQUITECTURA DE CONECTIVIDAD Y GESTIÓN DE CONEXIONES (CONNECTION POOLING)
+----------------------------------------------------------------------------------------------------
+• Diagnóstico del estado actual:
+  - La clase 'MySqlConnectionFactory' implementa un Singleton que mantiene una única conexión estática 
+    ('private static Connection conn').
+  - En cada método DAO se invoca 'conn.close()', lo que destruye el socket TCP físico en el sistema operativo.
+  - Como consecuencia, cada consulta posterior que invoca 'getConnection()' detecta la conexión cerrada y 
+    ejecuta 'DriverManager.getConnection(...)', negociando un nuevo handshake TCP, cifrado TLS/SSL y 
+    autenticación con el servidor MySQL.
+  - La latencia para establecer una conexión física con MySQL oscila típicamente entre 15ms y 50ms. Con más 
+    de 3.300 registros a insertar, esto introduce más de 60 segundos de sobrecarga pura de red.
+  - Adicionalmente, el uso de una única conexión estática hace que la arquitectura NO sea apta para entornos 
+    concurrentes o multihilo (Thread-Safety nulo), produciendo colisiones en el socket y estados de 
+    transacción inconsistentes.
+
+• Recomendaciones arquitectónicas:
+  1. Integración de un Connection Pool de alto rendimiento:
+     - Adoptar 'HikariCP' (o en su defecto Apache DBCP2 / Tomcat JDBC Pool).
+     - El pool inicializa y mantiene un conjunto de conexiones físicas "calientes" en memoria (ej. min 5, max 20).
+     - 'getConnection()' presta una conexión lógica en cuestión de microsegundos (<0.1ms).
+     - Al invocar 'conn.close()' dentro de un bloque 'try-with-resources', la conexión no se destruye a nivel 
+       de socket, sino que se restablece su estado y se devuelve al pool para su reutilización inmediata.
+  2. Configuración de banderas (Flags) de rendimiento en MySQL Connector/J:
+     - Configurar en la cadena JDBC (DB_URI) los siguientes parámetros esenciales:
+       * 'rewriteBatchedStatements=true': Parámetro crítico que reescribe múltiples sentencias preparadas de 
+         inserción ('addBatch()') en una única instrucción SQL multi-fila ('INSERT INTO t VALUES (...), (...)') 
+         a nivel de protocolo, multiplicando la velocidad de inserción hasta por 50x.
+       * 'cachePrepStmts=true': Habilita la caché del lado del cliente para declaraciones preparadas.
+       * 'prepStmtCacheSize=250': Cantidad de sentencias preparadas cacheadas por conexión.
+       * 'prepStmtCacheSqlLimit=2048': Límite de caracteres para sentencias cacheadas.
+       * 'useServerPrepStmts=true': Utiliza declaraciones preparadas reales del servidor MySQL.
+
+
+2. ARQUITECTURA TRANSACCIONAL Y UNIDAD DE TRABAJO (UNIT OF WORK)
+----------------------------------------------------------------------------------------------------
+• Diagnóstico del estado actual:
+  - Las transacciones ('commit()' y 'rollback()') están codificadas de forma fija dentro de cada método de 
+    cada DAO individual.
+  - Esto viola el principio de responsabilidad única (Single Responsibility Principle) y la abstracción 
+    de persistencia.
+  - Imposibilidad de transacciones atómicas de negocio: Si una operación requiere crear una Factura y sus 
+    correspondientes FacturaProducto asociados, el diseño actual hace 'commit' inmediatamente tras crear la 
+    Factura. Si falla la inserción de los productos, la Factura ya quedó persistida, dejando la base de datos 
+    en un estado corrupto o inconsistente.
+
+• Recomendaciones arquitectónicas:
+  1. Desacoplamiento hacia una Capa de Servicio (Service Layer):
+     - Mover la demarcación transaccional fuera de los DAOs hacia servicios de aplicación (ej. 'FacturacionService', 
+       'CargaDatosService').
+     - Los DAOs deben concentrarse únicamente en el acceso a datos (DML) sin decidir cuándo commitear.
+  2. Implementación del patrón Unit of Work / Contexto de Conexión:
+     - Permitir que múltiples DAOs compartan una misma transacción/conexión lógica provista por el servicio 
+       o a través de un 'ThreadLocal' / Administrador de Transacciones.
+     - En caso de éxito de todo el flujo, la capa de servicio ejecuta un único 'commit()'; ante cualquier falla, 
+       ejecuta un 'rollback()' integral.
+
+
+3. DISEÑO DE PATRONES DE ACCESO A DATOS (DAO / REPOSITORY PATTERN & SOLID)
+----------------------------------------------------------------------------------------------------
+• Diagnóstico del estado actual:
+  - Violación del Principio de Segregación de Interfaces (ISP): La interfaz 'DAO<T>' define métodos de 
+    definición de esquema ('createTable', 'dropTable') junto a operaciones CRUD.
+  - Violación del Principio de Sustitución de Liskov (LSP): La interfaz define 'select(int id)' y 'delete(int id)', 
+    asumiendo claves primarias 'int' simples. Clases como 'FacturaProductoDAO' poseen clave compuesta 
+    '(idFactura, idProducto)' y se ven forzadas a lanzar 'UnsupportedOperationException'. Lo mismo ocurre con 
+    'update' y 'delete' en 'FacturaDAO'.
+  - Acoplamiento en la Abstract Factory: 'DatabaseFactory' retorna clases concretas ('ClienteDAO') en lugar 
+    de las interfaces ('DAO<Cliente>'), quebrando el Principio de Inversión de Dependencias (DIP).
+
+• Recomendaciones arquitectónicas:
+  1. Segregación de interfaces:
+     - Parametrizar la interfaz con clave genérica: 'public interface DAO<T, ID>'.
+     - Para entidades compuestas, modelar una clase inmutable de clave (ej. 'FacturaProductoId(int idFactura, int idProducto)').
+     - Separar operaciones de solo lectura ('ReadOnlyDAO') o permitir que entidades sin soporte para borrado/modificación 
+       no estén obligadas a implementar métodos huérfanos.
+  2. Retorno de abstracciones en fábricas:
+     - Los métodos abstractos de 'DatabaseFactory' deben retornar 'DAO<T>' o 'Repository<T>', permitiendo 
+       intercambiar implementaciones (por ejemplo, migrar a JPA/Hibernate o mocks en pruebas unitarias) sin tocar 
+       el código de cliente.
+  3. Reemplazo de constantes mágicas por Enumeraciones:
+     - Utilizar 'enum DatabaseType { MYSQL_JDBC, DERBY_JDBC, ... }' en 'DatabaseFactory.getDAOFactory(...)'.
+
+
+4. PIPELINE DE INGESTA MASIVA DE DATOS (ETL & STREAMING)
+----------------------------------------------------------------------------------------------------
+• Diagnóstico del estado actual:
+  - En 'DatabaseLoader', se cargan las 4 listas completas en memoria RAM de forma simultánea antes de persistir.
+  - En 'CSVreader', se instancian miles de objetos en memoria heap en colecciones 'ArrayList<T>'.
+  - En un escenario real con millones de transacciones, este enfoque satura la memoria heap (OutOfMemoryError) 
+    y genera pausas prolongadas de Garbage Collection (Stop-The-World).
+  - La persistencia se realiza mediante un bucle 'for' que ejecuta sentencias individuales 'INSERT INTO ...'.
+
+• Recomendaciones arquitectónicas:
+  1. Pipeline de procesamiento en Streaming (Productor-Consumidor):
+     - Leer el archivo CSV línea por línea mediante streams o iteradores sin acumular todo el conjunto en memoria.
+     - Utilizar un buffer de procesamiento por lotes (Batch Chunking, ej. bloques de 1.000 registros).
+     - Cada bloque de 1.000 registros se parsea, se envía a la base de datos mediante 'ps.addBatch()' y 
+       'ps.executeBatch()', se realiza el commit del bloque y se descartan las referencias para liberar memoria.
+  2. Alternativa de alto rendimiento con MySQL 'LOAD DATA INFILE':
+     - Para volúmenes masivos de datos (millones de registros), la sentencia nativa 'LOAD DATA INFILE' o 
+       'LOAD DATA LOCAL INFILE' de MySQL es la solución más eficiente existente en la industria. Permite al 
+       motor leer directamente el archivo CSV e indexarlo en InnoDB sin pasar por la capa de mapeo de objetos 
+       de Java, logrando velocidades de cientos de miles de filas por segundo.
+
+
+5. OPTIMIZACIÓN Y DISEÑO DEL ESQUEMA DE BASE DE DATOS (MYSQL / INNODB)
+----------------------------------------------------------------------------------------------------
+• Diagnóstico del estado actual:
+  - Falta de índices secundarios en claves foráneas:
+    * En 'Factura', no existe índice sobre 'idCliente'. Las consultas y JOINs entre 'Cliente' y 'Factura' 
+      requieren un escaneo secuencial (Full Table Scan) de 'Factura'.
+    * En 'Factura_Producto', la clave primaria compuesta '(idFactura, idProducto)' crea un índice ordenado 
+      por 'idFactura'. Las consultas que filtran o agrupan por 'idProducto' (como 'obtenerProductoMayorRecaudacion' 
+      en 'ProductoDAO') no pueden utilizar eficientemente este índice por no incluir la columna izquierda de la PK.
+  - Tipos de datos para montos monetarios:
+    * Se utiliza 'FLOAT' en SQL y 'float' en Java para precios y totales facturados.
+    * Los tipos de punto flotante de 32 bits (IEEE 754) sufren pérdidas de precisión por redondeo binario, 
+      inadmisibles en sistemas contables y comerciales.
+
+• Recomendaciones de base de datos:
+  1. Estrategia de Indexación:
+     - Crear un índice en 'Factura(idCliente)':
+       'ALTER TABLE Factura ADD INDEX idx_factura_cliente (idCliente);'
+     - Crear un índice secundario compuesto en 'Factura_Producto(idProducto, cantidad)':
+       'ALTER TABLE Factura_Producto ADD INDEX idx_fp_producto_cantidad (idProducto, cantidad);'
+       Este índice funciona como un "Covering Index": contiene tanto la columna de unión ('idProducto') 
+       como la columna agregada ('cantidad'). El optimizador de MySQL puede resolver la consulta 
+       'obtenerProductoMayorRecaudacion' íntegramente desde la memoria del índice sin tener que acceder 
+       a las páginas de datos en disco.
+  2. Tipos de datos financieros:
+     - En el esquema MySQL: Migrar las columnas monetarias de 'FLOAT' a 'DECIMAL(12, 2)'.
+     - En Java: Utilizar 'BigDecimal' para cálculos exactos o 'long' almacenando valores en centavos.
+  3. Gestión del Ciclo de Vida del Esquema (Migraciones):
+     - Eliminar la ejecución de 'dropTable()' y 'createTable()' del flujo habitual de la aplicación.
+     - En MySQL, las sentencias DDL provocan commits implícitos y bloqueos exclusivos en el diccionario de datos.
+     - Adoptar herramientas estándar de migración de base de datos como 'Flyway' o 'Liquibase'. Las migraciones 
+       se gestionan en scripts versionados (ej. 'V1__init_schema.sql', 'V2__add_indexes.sql') aplicados 
+       durante el despliegue o arranque controlado.
+
+
+6. EXTERNALIZACIÓN DE CONFIGURACIÓN, SEGURIDAD Y OBSERVABILIDAD
+----------------------------------------------------------------------------------------------------
+• Diagnóstico del estado actual:
+  - Parámetros hardcodeados: La URL de conexión, usuario ('root') y contraseña ('password') residen 
+    en constantes dentro de 'MySqlConnectionFactory.java'.
+  - Salida de diagnóstico por consola con 'System.out.println' y trazas con 'e.printStackTrace()'.
+  - Salida abrupta con 'System.exit(1)' ante fallos de carga del driver.
+
+• Recomendaciones:
+  1. Externalización de variables:
+     - Almacenar credenciales en un archivo 'application.properties', 'database.properties' o variables 
+       de entorno del sistema operativo ('System.getenv("DB_PASSWORD")').
+     - Evita exponer credenciales en repositorios de código fuente y facilita la portabilidad entre 
+       entornos de desarrollo, testing y producción.
+  2. Logging estructurado y observabilidad:
+     - Implementar una fachada de logging como SLF4J con Logback o Log4j2.
+     - Reemplazar 'System.out.println' en 'Main' por logs de nivel INFO/DEBUG.
+     - Utilizar métricas o interceptores JDBC (como p6spy o micrometer) para medir tiempos de ejecución 
+       de consultas SQL y detectar consultas lentas (Slow Queries).
+  3. Manejo de excepciones resiliente:
+     - Reemplazar 'System.exit(1)' por el lanzamiento de excepciones específicas o 'RuntimeException' que 
+       permitan al contenedor o suite de tests reaccionar adecuadamente.
+====================================================================================================
