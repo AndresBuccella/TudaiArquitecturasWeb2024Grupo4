@@ -19,8 +19,9 @@ public class Usuario {
     private String apellido;
     private String nroCelular;
     private String email;
-    private String username;
+    private Boolean habilitado;
 
+    private String username;
     private Long idMonopatinActual;
 
     @ElementCollection
@@ -28,7 +29,6 @@ public class Usuario {
     @Column(name = "idCuentaApp")
     private List<Long> idCuentaApps;
 
-    private Boolean habilitado;
 
     // Método para agregar una cuenta por su ID
     public void agregarCuentaApp(Long cuentaId) {

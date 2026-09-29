@@ -113,15 +113,6 @@ public class SecurityConfig {
                         .requestMatchers(HttpMethod.DELETE, "/api/paradas/**").hasAuthority(AuthorityConstant._ADMIN)
 
                         //Usuario
-                        //.requestMatchers(HttpMethod.GET, "/api/usuarios").permitAll()
-                        //.requestMatchers(HttpMethod.GET, "/api/usuarios/**").permitAll()
-                        //.requestMatchers(HttpMethod.PUT, "/api/usuarios").permitAll()
-                        //.requestMatchers(HttpMethod.PUT, "/api/usuarios/**").permitAll()
-                        //.requestMatchers(HttpMethod.POST, "/api/usuarios").permitAll() //save
-                        //.requestMatchers(HttpMethod.POST, "/api/usuarios/**").permitAll() //save
-                        //.requestMatchers(HttpMethod.DELETE, "/api/usuarios").permitAll()
-                        //.requestMatchers(HttpMethod.DELETE, "/api/usuarios/**").permitAll()
-
                         .requestMatchers(HttpMethod.GET, "/api/usuarios/habilitados").hasAuthority(AuthorityConstant._ADMIN)
                         .requestMatchers(HttpMethod.GET, "/api/usuarios/deshabilitados").hasAuthority(AuthorityConstant._ADMIN)
                         .requestMatchers(HttpMethod.GET, "/api/usuarios/getByUsername/**").hasAuthority(AuthorityConstant._ADMIN)

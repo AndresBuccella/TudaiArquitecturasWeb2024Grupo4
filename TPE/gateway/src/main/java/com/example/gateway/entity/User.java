@@ -27,7 +27,7 @@ public class User {
     private String password;
 
     @JsonIgnore
-    @ManyToMany( fetch = FetchType.LAZY, cascade = CascadeType.PERSIST )
+    @ManyToMany( fetch = FetchType.LAZY)
     @JoinTable(
             name = "user_authority",
             joinColumns = { @JoinColumn(name = "user_id", referencedColumnName = "id") },

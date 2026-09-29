@@ -6,6 +6,7 @@ import io.jsonwebtoken.ExpiredJwtException;
 import jakarta.servlet.FilterChain;
 import jakarta.servlet.ServletException;
 import jakarta.servlet.http.HttpServletRequest;
+import jakarta.servlet.http.HttpServletRequestWrapper;
 import jakarta.servlet.http.HttpServletResponse;
 import lombok.Getter;
 import org.slf4j.Logger;
@@ -17,6 +18,9 @@ import org.springframework.util.StringUtils;
 import org.springframework.web.filter.OncePerRequestFilter;
 import java.io.IOException;
 import java.time.LocalDateTime;
+import java.util.Collections;
+import java.util.Enumeration;
+import java.util.List;
 
 public class JwtFilter extends OncePerRequestFilter {
 
@@ -37,6 +41,26 @@ public class JwtFilter extends OncePerRequestFilter {
             if ( StringUtils.hasText(jwt) && this.tokenProvider.validateToken( jwt ) ) {
                 Authentication authentication = this.tokenProvider.getAuthentication( jwt );
                 SecurityContextHolder.getContext().setAuthentication(authentication);
+                HttpServletRequestWrapper modifiedRequest = new HttpServletRequestWrapper(request) {
+                    @Override
+                    public String getHeader(String name) {
+                        if ("X-User-Username".equalsIgnoreCase(name)) {
+                            return authentication.getName();
+                        }
+                        return super.getHeader(name);
+                    }
+
+                    @Override
+                    public Enumeration<String> getHeaders(String name) {
+                        if ("X-User-Username".equalsIgnoreCase(name)) {
+                            return Collections.enumeration(List.of(authentication.getName()));
+                        }
+                        return super.getHeaders(name);
+                    }
+                };
+
+                filterChain.doFilter(modifiedRequest, response);
+                return;
             }
         } catch ( ExpiredJwtException e ) {
             log.info( "REST request UNAUTHORIZED - La sesión ha expirado." );

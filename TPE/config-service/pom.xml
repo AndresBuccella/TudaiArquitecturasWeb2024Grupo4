@@ -7,9 +7,7 @@
         <artifactId>TPE</artifactId>
         <version>0.0.1-SNAPSHOT</version>
     </parent>
-    <groupId>com.example</groupId>
     <artifactId>config-service</artifactId>
-    <version>0.0.1-SNAPSHOT</version>
     <name>config-service</name>
     <description>config-service</description>
     <url/>
