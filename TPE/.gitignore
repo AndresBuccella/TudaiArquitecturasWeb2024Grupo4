@@ -1,4 +1,6 @@
 HELP.md
+MEJORAS_PRODUCCION.txt
+README_EJECUCION.md
 target/
 !.mvn/wrapper/maven-wrapper.jar
 !**/src/main/**/target/
