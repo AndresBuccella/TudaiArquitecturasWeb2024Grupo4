@@ -6,10 +6,7 @@ import io.swagger.v3.oas.annotations.Operation;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
-import org.springframework.web.bind.annotation.PutMapping;
-import org.springframework.web.bind.annotation.RequestBody;
-import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.bind.annotation.*;
 
 @RestController
 @RequestMapping("/api/administradores/cuentas")
@@ -22,7 +19,7 @@ public class CuentaController {
     */
     @Operation(summary = "Pemite al adm habilitar cuenta", description = "Habilita una cuenta de usuario por su ID")
     @PutMapping("/habilitar/{id}")
-    public ResponseEntity<?> habilitarCuenta(@RequestBody Long id) {
+    public ResponseEntity<?> habilitarCuenta(@PathVariable Long id) {
         try {
             return cuentaFeignClient.habilitarCuenta(id);
         } catch (FeignException e) {
@@ -33,7 +30,7 @@ public class CuentaController {
 
     @Operation(summary = "Permite al adm deshabilitar cuenta", description = "Deshabilita una cuenta de usuario por su ID")
     @PutMapping("/deshabilitar/{id}")
-    public ResponseEntity<?> deshabilitarCuenta(@RequestBody Long id) {
+    public ResponseEntity<?> deshabilitarCuenta(@PathVariable Long id) {
         try {
             return cuentaFeignClient.deshabilitarCuenta(id);
         } catch (FeignException e) {
