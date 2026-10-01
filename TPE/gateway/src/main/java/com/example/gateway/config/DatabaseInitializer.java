@@ -21,7 +21,7 @@ public class DatabaseInitializer {
             UserRepository userRepository,
             PasswordEncoder passwordEncoder) {
         return args -> {
-            // 1. Crear roles si no existen
+            // 1. Crea roles si no existen
             if (authorityRepository.count() == 0) {
                 Authority adminRole = new Authority(AuthorityConstant._ADMIN);
                 Authority clienteRole = new Authority(AuthorityConstant._CLIENTE);
@@ -33,7 +33,7 @@ public class DatabaseInitializer {
                 System.out.println(">>> Roles base insertados en la base de datos");
             }
 
-            // 2. Crear usuario Admin inicial para poder probar el sistema
+            // 2. Crea usuario Admin inicial para poder probar el sistema
             if (userRepository.findOneWithAuthoritiesByUsernameIgnoreCase("admin").isEmpty()) {
                 Authority adminAuth = authorityRepository.findById(AuthorityConstant._ADMIN).orElseThrow();
 

@@ -77,13 +77,17 @@ public class TarifaService {
     @Transactional
     public TarifaDto update(Long id, TarifaDto tarifaDto) {
         try {
-            Tarifa tarifaModificada = new Tarifa(tarifaDto.getNombreTarifa(), tarifaDto.getTipoTarifa(), tarifaDto.getPrecioTarifa(), tarifaDto.getDescuentoTarifa(), tarifaDto.getFechaInicio());
+            Tarifa tarifaExistente = tarifaRepository.findById(id).orElseThrow(() -> new RuntimeException("No existe un tarifa con id=" + id + "!"));
 
-            if (tarifaRepository.existsById(id)){
-                tarifaRepository.save(tarifaModificada);
-                return tarifaDto;
-            }
-            throw new RuntimeException("No existe un tarifa con id=" + id + "!");
+            tarifaExistente.setNombreTarifa(tarifaDto.getNombreTarifa());
+            tarifaExistente.setTipoTarifa(tarifaDto.getTipoTarifa());
+            tarifaExistente.setPrecioTarifa(tarifaDto.getPrecioTarifa());
+            tarifaExistente.setDescuentoTarifa(tarifaDto.getDescuentoTarifa());
+            tarifaExistente.setFechaInicio(tarifaDto.getFechaInicio());
+            tarifaRepository.save(tarifaExistente);
+
+            return new TarifaDto(tarifaExistente);
+
         } catch (Exception e) {
             throw new RuntimeException("Error al actualizar tarifa con id=" + id + "!" + e.getMessage());
         }

@@ -11,14 +11,15 @@ import java.time.LocalDate;
 @AllArgsConstructor
 @NoArgsConstructor
 public class TarifaDto {
-    private String nombreTarifa;
     private Long id;
+    private String nombreTarifa;
     private String tipoTarifa;
     private Double precioTarifa;
     private Double descuentoTarifa;
     private LocalDate fechaInicio;
 
     public TarifaDto(Tarifa tarifa) {
+        id = tarifa.getId();
         nombreTarifa = tarifa.getNombreTarifa();
         tipoTarifa = tarifa.getTipoTarifa();
         precioTarifa = tarifa.getPrecioTarifa();

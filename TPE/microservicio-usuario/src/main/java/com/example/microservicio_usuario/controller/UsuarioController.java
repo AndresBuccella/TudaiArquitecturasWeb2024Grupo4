@@ -20,7 +20,6 @@ public class UsuarioController {
 
     @Autowired
     UsuarioService usuarioService;
-    // Create
 
     @Operation(summary = "Crear un nuevo usuario")
     @ApiResponses(value = {
@@ -31,12 +30,9 @@ public class UsuarioController {
     @PostMapping("")
     public ResponseEntity<Usuario> save(@RequestBody Usuario usuario,
                                         @RequestHeader("X-User-Username") String username) {
-        System.out.println("AAAAAAAAAAA");
         Usuario usuarioNew = usuarioService.save(usuario, username);
         return ResponseEntity.ok(usuarioNew);
     }
-
-    // Read
 
     @Operation(summary = "Obtener todos los usuarios")
     @GetMapping("")
@@ -98,7 +94,6 @@ public class UsuarioController {
             @ApiResponse(responseCode = "204", description = "Usuario eliminado exitosamente"),
             @ApiResponse(responseCode = "404", description = "Usuario no encontrado", content = @Content)
     })
-    // Delete
     @DeleteMapping("/{id}")
     public ResponseEntity<Void> delete(@PathVariable("id") Long id) {
         Usuario usuario = usuarioService.findById(id);
@@ -114,7 +109,6 @@ public class UsuarioController {
             @ApiResponse(responseCode = "204", description = "Usuario habilitado exitosamente"),
             @ApiResponse(responseCode = "404", description = "Usuario no encontrado", content = @Content)
     })
-    // Habilitar
     @PutMapping("/habilitar/{id}")
     public ResponseEntity<Void> habilitar(@PathVariable("id") Long id) {
         Usuario usuario = usuarioService.findById(id);
@@ -130,7 +124,6 @@ public class UsuarioController {
             @ApiResponse(responseCode = "204", description = "Usuario deshabilitado exitosamente"),
             @ApiResponse(responseCode = "404", description = "Usuario no encontrado", content = @Content)
     })
-    // Deshabilitar
     @PutMapping("/deshabilitar/{id}")
     public ResponseEntity<Void> deshabilitar(@PathVariable("id") Long id) {
         Usuario usuario = usuarioService.findById(id);
@@ -176,5 +169,4 @@ public class UsuarioController {
         usuarioService.finalizarViaje(idCuenta, idMonopatin);
         return ResponseEntity.ok().build();
     }
-
 }
