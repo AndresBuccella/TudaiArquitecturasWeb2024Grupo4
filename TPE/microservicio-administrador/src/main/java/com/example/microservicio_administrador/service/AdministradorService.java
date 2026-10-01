@@ -48,11 +48,12 @@ public class AdministradorService {
     }
 
     @Transactional
-    public AdministradorDto delete(Long id) {
-        if (administradorRepository.existsById(id))
+    public boolean delete(Long id) {
+        if (administradorRepository.existsById(id)) {
             administradorRepository.deleteById(id);
-
-        return null;
+            return true;
+        }
+        return false;
     }
     
     public ReporteTotalFacturadoEntreMesesDeAnio getReporteTotalFacturadoEntreMesesDeAnio(Long mesInicio, Long mesFin, Long anio) {

@@ -11,7 +11,9 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
+import org.springframework.web.servlet.support.ServletUriComponentsBuilder;
 
+import java.net.URI;
 import java.util.List;
 
 
@@ -65,17 +67,22 @@ public class AdministradorController {
 
     @Operation(summary = "Guardar un nuevo administrador", description = "Crea un nuevo administrador")
     @ApiResponses(value = {
-            @ApiResponse(responseCode = "200", description = "Administrador creado con éxito"),
-            @ApiResponse(responseCode = "404", description = "Error al crear el administrador")
+            @ApiResponse(responseCode = "201", description = "Administrador creado con éxito"),
+            @ApiResponse(responseCode = "400", description = "Datos inválidos o error al crear el administrador")
     })
     @PostMapping
     public ResponseEntity<AdministradorDto> save(@RequestBody AdministradorDto newAdmin) {
         AdministradorDto admin = administradorService.save(newAdmin);
 
         if (admin == null)
-            return ResponseEntity.notFound().build();
+            return ResponseEntity.badRequest().build();
+        URI location = ServletUriComponentsBuilder
+                .fromCurrentRequest()
+                .path("/{id}")
+                .buildAndExpand(admin.getId())
+                .toUri();
 
-        return ResponseEntity.ok(admin);
+        return ResponseEntity.created(location).body(admin);
     }
 
     @Operation(summary = "Eliminar un administrador", description = "Elimina un administrador basado en el ID")

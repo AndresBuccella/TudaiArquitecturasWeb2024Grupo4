@@ -5,6 +5,7 @@ import com.example.microservicio_administrador.dto.AdministradorDto;
 import com.example.microservicio_administrador.feignClient.ViajeFeignClient;
 import com.example.microservicio_administrador.model.ReporteTotalFacturadoEntreMesesDeAnio;
 import com.example.microservicio_administrador.service.AdministradorService;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.mockito.InjectMocks;
@@ -22,6 +23,7 @@ import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.*;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.*;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.header;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
 @WebMvcTest(AdministradorController.class)
@@ -29,6 +31,9 @@ public class AdministradorControllerTest {
 
     @Autowired
     private MockMvc mockMvc;
+
+    @Autowired
+    private ObjectMapper objectMapper;
 
     @MockBean
     private AdministradorService administradorService;
@@ -69,35 +74,50 @@ public class AdministradorControllerTest {
                 .andExpect(jsonPath("$.nombre").value("Admin1"));
     }
 
+    // --- TEST: Guardar con 201 Created y Header Location ---
     @Test
-    public void testSaveAdministrador() throws Exception {
-        AdministradorDto adminDto = new AdministradorDto();
-        adminDto.setNombre("Admin1");
+    public void testSaveAdministradorExitoso() throws Exception {
+        AdministradorDto inputDto = new AdministradorDto();
+        // Seteá acá los campos necesarios de tu DTO
 
-        when(administradorService.save(any(AdministradorDto.class))).thenReturn(adminDto);
+        AdministradorDto savedDto = new AdministradorDto();
+        savedDto.setId(10L); // Simulamos que la DB le asignó el ID 10
+
+        when(administradorService.save(any(AdministradorDto.class))).thenReturn(savedDto);
 
         mockMvc.perform(post("/api/administradores")
                         .contentType(MediaType.APPLICATION_JSON)
-                        .content("{\"nombre\": \"Admin1\"}"))
-                .andExpect(status().isOk())
-                .andExpect(jsonPath("$.nombre").value("Admin1"));
+                        .content(objectMapper.writeValueAsString(inputDto)))
+                // 1. Verifica HTTP 201 Created
+                .andExpect(status().isCreated())
+                // 2. Verifica que la cabecera Location exista y termine en /10
+                .andExpect(header().exists("Location"))
+                .andExpect(header().string("Location", endsWith("/api/administradores/10")))
+                // 3. Verifica el cuerpo de la respuesta
+                .andExpect(jsonPath("$.id").value(10L));
     }
 
 
+    // --- TEST: Delete cuando el recurso NO existe (404) ---
     @Test
-    public void testDeleteAdministrador() throws Exception {
-        AdministradorDto adminDto = new AdministradorDto();
-        adminDto.setId(1L);
-        adminDto.setNombre("Admin1");
+    public void testDeleteAdministradorNoEncontrado() throws Exception {
+        Long idInexistente = 999L;
+        // Simulamos que el service devuelve false porque no existía
+        when(administradorService.delete(idInexistente)).thenReturn(false);
 
-        // Simular el comportamiento del método delete para devolver un AdministradorDto
-        when(administradorService.delete(1L)).thenReturn(adminDto);
+        mockMvc.perform(delete("/api/administradores/{id}", idInexistente))
+                .andExpect(status().isNotFound()); // Verifica HTTP 404
+    }
 
-        mockMvc.perform(delete("/api/administradores/1"))
-                .andExpect(status().isNoContent());
+    // --- TEST: Delete cuando el recurso SÍ existe (204) ---
+    @Test
+    public void testDeleteAdministradorExitoso() throws Exception {
+        Long idExistente = 1L;
+        // Simulamos que el service eliminó el registro exitosamente
+        when(administradorService.delete(idExistente)).thenReturn(true);
 
-        // Verificar que el método delete del servicio fue llamado
-        verify(administradorService, times(1)).delete(1L);
+        mockMvc.perform(delete("/api/administradores/{id}", idExistente))
+                .andExpect(status().isNoContent()); // Verifica HTTP 204 No Content
     }
 
     @Test

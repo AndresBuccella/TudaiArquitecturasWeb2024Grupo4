@@ -22,9 +22,10 @@ public class TarifaService {
     */
     @Transactional(readOnly = true)
     public TarifaDto getTarifaVigenteByTipo(String tipo) {
-        Tarifa t = tarifaRepository.getTarifaVigente(tipo)
-                .orElseThrow(() -> new RuntimeException("Tipo de tarifa no encontrada o no vigente:" + tipo));
-        return new TarifaDto(t);
+        return tarifaRepository
+                .getTarifaVigente(tipo, LocalDate.now())
+                .map(TarifaDto::new) // Si existe, la convierte a DTO
+                .orElseThrow(() -> new RuntimeException("Tipo de tarifa no encontrada o no vigente: " + tipo));
 //        En memoria ram del servidor
 //        List<Tarifa> tarifas = tarifaRepository.findFirstByTipoTarifaAndFechaInicioLessThanEqualOrderByFechaInicioDesc(tipo)
 //                .stream()
