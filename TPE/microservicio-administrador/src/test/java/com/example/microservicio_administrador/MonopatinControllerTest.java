@@ -72,26 +72,18 @@ public class MonopatinControllerTest {
 
     @Test
     public void testHabilitarMonopatin() throws Exception {
-        Monopatin monopatin = new Monopatin();
-        monopatin.setId(1L);
-
-        when(monopatinFeignClient.habilitarMonopatin(1L)).thenReturn(monopatin);
+        when(monopatinFeignClient.habilitarMonopatin(1L)).thenReturn(true);
 
         mockMvc.perform(put("/api/administradores/monopatines/habilitar/1"))
-                .andExpect(status().isOk())
-                .andExpect(jsonPath("$.id").value(1L));
+                .andExpect(status().isOk());
     }
 
     @Test
     public void testDeshabilitarMonopatin() throws Exception {
-        Monopatin monopatin = new Monopatin();
-        monopatin.setId(1L);
-
-        when(monopatinFeignClient.deshabilitarMonopatin(1L)).thenReturn(monopatin);
+        when(monopatinFeignClient.deshabilitarMonopatin(1L)).thenReturn(true);
 
         mockMvc.perform(put("/api/administradores/monopatines/deshabilitar/1"))
-                .andExpect(status().isOk())
-                .andExpect(jsonPath("$.id").value(1L));
+                .andExpect(status().isOk());
     }
 
     @Test

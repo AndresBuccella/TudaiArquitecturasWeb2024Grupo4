@@ -18,11 +18,11 @@ public interface MonopatinFeignClient {
     @DeleteMapping("/{id}")
     void delete(@PathVariable("id") Long id);
 
-    @PutMapping("/habilitar/{id}")
-    Monopatin deshabilitarMonopatin(@PathVariable("id") Long id);
-
     @PutMapping("/deshabilitar/{id}")
-    Monopatin habilitarMonopatin(@PathVariable("id") Long id);
+    boolean deshabilitarMonopatin(@PathVariable("id") Long id);
+
+    @PutMapping("/habilitar/{id}")
+    boolean habilitarMonopatin(@PathVariable("id") Long id);
 
     @PutMapping("/{id}")
     Monopatin updateMonopatin(@PathVariable("id") Long id, @RequestBody Monopatin Monopatin);

@@ -82,11 +82,9 @@ public class MonopatinController {
             @ApiResponse(responseCode = "404", description = "Monopatín no encontrado")
     })
     @PutMapping("/habilitar/{id}")
-    public ResponseEntity<?> habilitar(@PathVariable("id") Long idMonopatin) {
-        if (monopatinService.habilitar(idMonopatin)) {
-            return ResponseEntity.ok().build();
-        }
-        return ResponseEntity.notFound().build();
+    public ResponseEntity<Boolean> habilitar(@PathVariable("id") Long idMonopatin) {
+        boolean exito = monopatinService.habilitar(idMonopatin);
+        return ResponseEntity.ok(exito);
     }
 
     @Operation(summary = "Deshabilitar un monopatín por ID")
@@ -95,11 +93,9 @@ public class MonopatinController {
             @ApiResponse(responseCode = "404", description = "Monopatín no encontrado")
     })
     @PutMapping("/deshabilitar/{id}")
-    public ResponseEntity<?> deshabilitar(@PathVariable("id") Long idMonopatin) {
-        if (monopatinService.deshabilitar(idMonopatin)) {
-            return ResponseEntity.ok().build();
-        }
-        return ResponseEntity.notFound().build();
+    public ResponseEntity<Boolean> deshabilitar(@PathVariable("id") Long idMonopatin) {
+        boolean exito = monopatinService.deshabilitar(idMonopatin);
+        return ResponseEntity.ok(exito);
     }
 
     @Operation(summary = "Obtener reporte de monopatines por kilómetros")

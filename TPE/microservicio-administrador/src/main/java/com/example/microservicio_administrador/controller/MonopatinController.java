@@ -54,22 +54,22 @@ public class MonopatinController {
 
     @Operation(summary = "Permite al adm habilitar monopatín", description = "Habilita un monopatín por su ID")
     @PutMapping("/habilitar/{id}")
-    public ResponseEntity<Monopatin> habilitarMonopatin(@PathVariable Long id) {
-        Monopatin monopatin = monopatinFeignClient.habilitarMonopatin(id);
-        if (monopatin == null)
+    public ResponseEntity<Void> habilitarMonopatin(@PathVariable Long id) {
+        boolean exito = monopatinFeignClient.habilitarMonopatin(id);
+        if (!exito) {
             return ResponseEntity.notFound().build();
-
-        return ResponseEntity.ok(monopatin);
+        }
+        return ResponseEntity.ok().build();
     }
 
     @Operation(summary = "Permite al adm deshabilitar monopatín", description = "Deshabilita un monopatín por su ID")
     @PutMapping("/deshabilitar/{id}")
-    public ResponseEntity<Monopatin> deshabilitarMonopatin(@PathVariable Long id) {
-        Monopatin monopatin = monopatinFeignClient.deshabilitarMonopatin(id);
-        if (monopatin == null)
+    public ResponseEntity<Void> deshabilitarMonopatin(@PathVariable Long id) {
+        boolean exito = monopatinFeignClient.deshabilitarMonopatin(id);
+        if (!exito) {
             return ResponseEntity.notFound().build();
-
-        return ResponseEntity.ok(monopatin);
+        }
+        return ResponseEntity.ok().build();
     }
 
     @Operation(summary = "Permite al adm actualizar monopatín", description = "Actualiza un monopatín por su ID")
