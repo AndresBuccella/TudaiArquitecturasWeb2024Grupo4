@@ -9,7 +9,6 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDate;
 import java.util.List;
-import java.util.stream.Collectors;
 
 @Service
 public class TarifaService {
@@ -22,28 +21,29 @@ public class TarifaService {
     el sistema habilite los nuevos precios.
     */
     @Transactional(readOnly = true)
-    public TarifaDto getTarifaByTipo(String tipo) {
-        List<Tarifa> tarifas = tarifaRepository.getTarifaByTipo(tipo)
-                .stream()
-                .sorted((t1, t2) -> t2.getFechaInicio().compareTo(t1.getFechaInicio())) // Ordenar por fechaInicio
-                .collect(Collectors.toList());
-
-        if (tarifas.isEmpty()) {
-            throw new RuntimeException("No se encontró el tipo de tarifa: " + tipo);
-        }
-
-        Tarifa tarifa = tarifas.get(0); // Seleccionar la más reciente
-
-        // Verificar si la fecha de inicio ha pasado
-        LocalDate hoy = LocalDate.now();
-        if (tarifa.getFechaInicio() != null && !hoy.isBefore(tarifa.getFechaInicio())) {
-            return new TarifaDto(tarifa);  // El nuevo precio ya es válido
-        }
-
-        // Si la fecha de inicio no ha pasado, retornar el precio actual
-        TarifaDto tarifaDto = new TarifaDto(tarifa);
-        tarifaDto.setPrecioTarifa(tarifa.getPrecioTarifa()); // Usa el precio actual
-        return tarifaDto;
+    public TarifaDto getTarifaVigenteByTipo(String tipo) {
+        Tarifa t = tarifaRepository.getTarifaVigente(tipo)
+                .orElseThrow(() -> new RuntimeException("Tipo de tarifa no encontrada o no vigente:" + tipo));
+        return new TarifaDto(t);
+//        En memoria ram del servidor
+//        List<Tarifa> tarifas = tarifaRepository.findFirstByTipoTarifaAndFechaInicioLessThanEqualOrderByFechaInicioDesc(tipo)
+//                .stream()
+//                .sorted(Comparator.comparing(Tarifa::getFechaInicio).reversed()) // Ordenar por fechaInicio
+//                .toList();
+//        //Si se necesita hacer en la bbdd se agrega en TarifaRespository List<Tarifa> findByTipoTarifaOrderByFechaInicioDesc(String tipoTarifa);
+//
+//        if (tarifas.isEmpty()) {
+//            throw new RuntimeException("No se encontró el tipo de tarifa: " + tipo);
+//        }
+//
+//        // Verificar si la fecha de inicio ha pasado
+//        LocalDate hoy = LocalDate.now();
+//        for (Tarifa t : tarifas) {
+//            if (t.getFechaInicio() != null && !t.getFechaInicio().isAfter(hoy)) {
+//                return new TarifaDto(t);  // El nuevo precio ya es válido
+//            }
+//        }
+//        throw new RuntimeException("No hay tarifa vigente a la fecha para el tipo: " + tipo);
     }
 
     @Transactional(readOnly = true)
@@ -70,7 +70,7 @@ public class TarifaService {
             tarifaRepository.save(tarifaModificada);
             return tarifaDto;
         } catch (Exception e) {
-            throw new RuntimeException("Error al guardar carrera!" + e.getMessage());
+            throw new RuntimeException("Error al guardar tarifa!" + e.getMessage());
         }
     }
 

@@ -19,9 +19,9 @@ public class TarifaController {
 
     @Operation(summary = "Obtener tarifa por tipo", description = "Obtiene una tarifa específica por su tipo")
     @GetMapping("/tipo/{tipo}")
-    public ResponseEntity<?> getTarifaByTipo(@PathVariable String tipo) {
+    public ResponseEntity<?> getTarifaVigenteByTipo(@PathVariable String tipo) {
         try {
-            TarifaDto tarifaDto = tarifaService.getTarifaByTipo(tipo);
+            TarifaDto tarifaDto = tarifaService.getTarifaVigenteByTipo(tipo);
             return ResponseEntity.status(HttpStatus.OK).body(tarifaDto);
         } catch (Exception e) {
             return ResponseEntity.status(HttpStatus.NOT_FOUND)

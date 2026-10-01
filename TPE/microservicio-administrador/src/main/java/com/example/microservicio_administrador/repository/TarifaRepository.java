@@ -12,8 +12,15 @@ import java.util.Optional;
 public interface TarifaRepository extends JpaRepository<Tarifa, Long> {
 
     @Query("SELECT t FROM Tarifa t WHERE t.tipoTarifa ILIKE :tipo")
-    public Optional<Tarifa> getTarifaByTipo(String tipo);
+    Optional<Tarifa> getTarifaByTipo(String tipo);
+
+    @Query("SELECT t " +
+            "FROM Tarifa t " +
+            "WHERE t.tipoTarifa ILIKE :tipo AND t.fechaInicio <= CURRENT_DATE " +
+            "ORDER BY t.fechaInicio DESC " +
+            "LIMIT 1")
+    Optional<Tarifa> getTarifaVigente(String tipo);
 
     @Query("SELECT t FROM Tarifa t ORDER BY t.fechaInicio DESC")
-    public List<Tarifa> getAllTarifasOrdenadasPorFecha();
+    List<Tarifa> getAllTarifasOrdenadasPorFecha();
 }

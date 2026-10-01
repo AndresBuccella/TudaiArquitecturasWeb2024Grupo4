@@ -77,7 +77,7 @@ public class TarifaControllerTest {
         tarifa.setId(1L);
         tarifa.setTipoTarifa("Estándar");
 
-        when(tarifaService.getTarifaByTipo("Estándar")).thenReturn(tarifa);
+        when(tarifaService.getTarifaVigenteByTipo("Estándar")).thenReturn(tarifa);
 
         mockMvc.perform(get("/api/administradores/tarifas/tipo/Estándar"))
                 .andExpect(status().isOk())
