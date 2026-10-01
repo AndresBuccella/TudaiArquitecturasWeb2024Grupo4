@@ -40,11 +40,8 @@ public class AdministradorService {
     public AdministradorDto save(AdministradorDto newAdmin) {
         Administrador admin = new Administrador();
         admin.setNombre(newAdmin.getNombre());
-
-        if (administradorRepository.save(admin) != null)
-            return newAdmin;
-
-        return null;
+        administradorRepository.save(admin);
+        return newAdmin;
     }
 
     @Transactional

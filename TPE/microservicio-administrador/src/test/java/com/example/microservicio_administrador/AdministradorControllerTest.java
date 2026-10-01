@@ -38,15 +38,11 @@ public class AdministradorControllerTest {
     @MockBean
     private AdministradorService administradorService;
 
-    @MockBean
-    private ViajeFeignClient viajeFeignClient;
-
     @InjectMocks
     private AdministradorController administradorController;
 
     @BeforeEach
     public void setup() {
-        MockitoAnnotations.openMocks(this);
         mockMvc = MockMvcBuilders.standaloneSetup(administradorController).build();
     }
 
