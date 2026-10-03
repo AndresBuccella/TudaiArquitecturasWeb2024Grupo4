@@ -7,10 +7,15 @@ import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 
+import java.util.List;
+
 @FeignClient(name="microservicio-monopatin")
 public interface MonopatinFeignClient {
     @GetMapping("/{id}")
     Monopatin getMonopatinById(@PathVariable("id") Long id);
+
+    @GetMapping("/{ids}")
+    Monopatin getMonopatinByIds(@PathVariable("ids") List<Long> id);
 
     @PostMapping ("")
     Monopatin save(@RequestBody Monopatin monopatin);

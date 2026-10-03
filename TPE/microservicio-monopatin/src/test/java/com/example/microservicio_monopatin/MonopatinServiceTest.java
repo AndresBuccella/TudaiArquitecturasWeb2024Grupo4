@@ -71,7 +71,7 @@ public class MonopatinServiceTest {
 
         when(monopatinRepository.findById(1L)).thenReturn(Optional.of(monopatin));
 
-        Monopatin result = monopatinService.findById(1L);
+        MonopatinDTO result = monopatinService.findById(1L);
 
         assertNotNull(result);
         assertEquals(1L, result.getId());
@@ -90,7 +90,7 @@ public class MonopatinServiceTest {
 
         doNothing().when(monopatinRepository).delete(monopatin);
 
-        monopatinService.delete(monopatin);
+        monopatinService.delete(monopatin.getId());
 
         // Verifica que el método delete fue llamado una vez con el Monopatin correcto
         verify(monopatinRepository, times(1)).delete(monopatin);

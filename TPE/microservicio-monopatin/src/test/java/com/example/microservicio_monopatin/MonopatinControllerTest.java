@@ -3,7 +3,6 @@ package com.example.microservicio_monopatin;
 import com.example.microservicio_monopatin.controller.MonopatinController;
 import com.example.microservicio_monopatin.dtos.MonopatinDTO;
 import com.example.microservicio_monopatin.dtos.ReporteUsoDto;
-import com.example.microservicio_monopatin.entity.Monopatin;
 import com.example.microservicio_monopatin.service.MonopatinService;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -39,7 +38,6 @@ public class MonopatinControllerTest {
 
     @BeforeEach
     public void setup() {
-        MockitoAnnotations.openMocks(this);
         mockMvc = MockMvcBuilders.standaloneSetup(monopatinController).build();
     }
 
@@ -55,7 +53,7 @@ public class MonopatinControllerTest {
     @Test
     public void testGetMonopatinById() throws Exception {
         // Crea un objeto Monopatin simulado
-        Monopatin monopatin = new Monopatin();
+        MonopatinDTO monopatin = new MonopatinDTO();
         monopatin.setId(1L);
 
         // Simula que el servicio devuelve el MonopatinDTO
@@ -95,21 +93,21 @@ public class MonopatinControllerTest {
     @Test
     public void testDeleteMonopatin() throws Exception {
         // Crea un objeto Monopatin para simular el que se eliminará
-        Monopatin monopatin = new Monopatin();
+        MonopatinDTO monopatin = new MonopatinDTO();
         monopatin.setId(1L);
 
         // Simula que la búsqueda devuelve el objeto Monopatin
         when(monopatinService.findById(1L)).thenReturn(monopatin);
 
         // Simula que el método delete no lanza excepciones
-        doNothing().when(monopatinService).delete(monopatin);
+        doNothing().when(monopatinService).delete(monopatin.getId());
 
         // Realiza la solicitud DELETE y espera un estado 204 No Content
         mockMvc.perform(delete("/api/monopatines/1"))
                 .andExpect(status().isNoContent());
 
         // Verifica que el método delete fue llamado exactamente una vez
-        verify(monopatinService, times(1)).delete(monopatin);
+        verify(monopatinService, times(1)).delete(monopatin.getId());
     }
 
     @Test

@@ -2,7 +2,6 @@ package com.example.microservicio_monopatin.controller;
 
 import com.example.microservicio_monopatin.dtos.MonopatinDTO;
 import com.example.microservicio_monopatin.dtos.ReporteUsoDto;
-import com.example.microservicio_monopatin.entity.Monopatin;
 import com.example.microservicio_monopatin.service.MonopatinService;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.responses.ApiResponse;
@@ -42,12 +41,25 @@ public class MonopatinController {
     })
     @GetMapping("/{id}")
     public ResponseEntity<MonopatinDTO> getMonopatinById(@PathVariable("id") Long id) {
-        Monopatin monopatin = monopatinService.findById(id);
+        MonopatinDTO monopatin = monopatinService.findById(id);
         if (monopatin == null) {
             return ResponseEntity.notFound().build();
         }
-        MonopatinDTO monopatinDTO = new MonopatinDTO(monopatin);
-        return ResponseEntity.ok(monopatinDTO);
+        return ResponseEntity.ok(monopatin);
+    }
+
+    @Operation(summary = "Obtener todos los monopatines por IDs")
+    @ApiResponses(value = {
+            @ApiResponse(responseCode = "200", description = "Monopatín encontrado"),
+            @ApiResponse(responseCode = "404", description = "Monopatín no encontrado")
+    })
+    @GetMapping("/{ids}")
+    public ResponseEntity<List<MonopatinDTO>> getMonopatinByIds(@PathVariable("ids") List<Long> ids) {
+        List<MonopatinDTO> monopatines = monopatinService.findByIds(ids);
+        if (monopatines.isEmpty()) {
+            return ResponseEntity.notFound().build();
+        }
+        return ResponseEntity.ok(monopatines);
     }
 
     @Operation(summary = "Crear un nuevo monopatín")
@@ -68,11 +80,10 @@ public class MonopatinController {
     })
     @DeleteMapping("/{id}")
     public ResponseEntity<Void> delete(@PathVariable("id") Long id) {
-        Monopatin monopatin = monopatinService.findById(id);
-        if (monopatin == null) {
+        boolean exito = monopatinService.delete(id);
+        if (!exito){
             return ResponseEntity.notFound().build();
         }
-        monopatinService.delete(monopatin);
         return ResponseEntity.noContent().build();
     }
 

@@ -15,6 +15,7 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.time.Duration;
 import java.time.LocalDateTime;
+import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
 import java.util.Map;
@@ -52,15 +53,28 @@ public class MonopatinService {
     }
 
     @Transactional
-    public void delete(Monopatin monopatin) {
-        monopatinRepository.delete(monopatin);
+    public boolean delete(Long id) {
+        if (monopatinRepository.existsById(id)){
+            monopatinRepository.deleteById(id);
+            return true;
+        }
+        return false;
     }
 
     @Transactional(readOnly = true)
-    public Monopatin findById(Long id) {
-        return monopatinRepository.findById(id).orElse(null);
+    public MonopatinDTO findById(Long id) {
+        Monopatin m = monopatinRepository.findById(id).orElse(null);
+        return m != null ? new MonopatinDTO(m) : null;
     }
-
+    public List<MonopatinDTO> findByIds(List<Long> id) {
+        List<Monopatin> monopatins = monopatinRepository.findAllById(id);
+        List<MonopatinDTO> listMonopatinsDTO = new ArrayList<>();
+        for(Monopatin m : monopatins){
+            MonopatinDTO monopatinDTO = new MonopatinDTO(m);
+            listMonopatinsDTO.add(monopatinDTO);
+        }
+        return listMonopatinsDTO;
+    }
     @Transactional
     public Monopatin update(Monopatin monopatin) {
         return monopatinRepository.save(monopatin);

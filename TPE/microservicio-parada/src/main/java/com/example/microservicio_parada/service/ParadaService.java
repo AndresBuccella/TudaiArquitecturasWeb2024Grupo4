@@ -11,7 +11,6 @@ import org.springframework.stereotype.Service;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
-import java.util.stream.Collectors;
 
 @Service
 public class ParadaService {
@@ -75,9 +74,7 @@ public class ParadaService {
         if (paradaOptional.isPresent()) {
             Parada parada = paradaOptional.get();
             if (parada.getIdMonopatines() != null) {
-                for (Long idMonopatin : parada.getIdMonopatines()) {
-                    salida.add(monopatinFeignClient.getMonopatinById(idMonopatin));
-                }
+                salida.add(monopatinFeignClient.getMonopatinByIds(parada.getIdMonopatines()));
             }
         }
         return salida;
@@ -88,7 +85,7 @@ public class ParadaService {
         List<Parada> paradas = getAllHabilitadas();
         List<Parada> paradasCercanas = paradas.stream()
                 .filter(parada -> calcularDistancia(latitud, longitud, parada.getLatitud(), parada.getLongitud()) <= radio)
-                .collect(Collectors.toList());
+                .toList();
 
         List<Monopatin> monopatinesCercanos = new ArrayList<>();
         for (Parada parada : paradasCercanas) {
