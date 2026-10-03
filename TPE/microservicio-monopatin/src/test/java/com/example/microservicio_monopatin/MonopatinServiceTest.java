@@ -144,12 +144,12 @@ public class MonopatinServiceTest {
         // Mockear repositorio y feign clients
         when(monopatinRepository.findById(1L)).thenReturn(Optional.of(monopatin));
         when(monopatinRepository.save(any(Monopatin.class))).thenReturn(monopatin);
-        when(paradaFeignClient.quitarMonopatin(eq(1L), eq(1L))).thenReturn(paradaSimulada);
+        when(paradaFeignClient.quitarMonopatin(eq("1"), eq(1L))).thenReturn(paradaSimulada);
 
         // Mock de viajeFeignClient
         doNothing().when(viajeFeignClient).iniciarViaje(eq(1L), any(LocalDateTime.class));
 
-        MonopatinDTO result = monopatinService.iniciarViaje(1L, 1L);
+        MonopatinDTO result = monopatinService.iniciarViaje("1", 1L);
 
         // Verificaciones
         assertNotNull(result);
@@ -188,10 +188,10 @@ public class MonopatinServiceTest {
 
         // Mockear el repositorio y FeignClient
         when(monopatinRepository.findById(1L)).thenReturn(Optional.of(monopatin));
-        when(paradaFeignClient.getParadaById(1L)).thenReturn(parada);
+        when(paradaFeignClient.getParadaById("1")).thenReturn(parada);
 
         // Ejecutar el método
-        boolean resultado = monopatinService.pararMonopatin(1L, 1L, 1L, 10L);
+        boolean resultado = monopatinService.pararMonopatin(1L, "1", 1L, 10L);
 
         // Validar el resultado
         assertTrue(resultado);

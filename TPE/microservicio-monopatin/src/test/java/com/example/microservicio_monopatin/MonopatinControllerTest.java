@@ -58,9 +58,6 @@ public class MonopatinControllerTest {
         Monopatin monopatin = new Monopatin();
         monopatin.setId(1L);
 
-        // Crea un MonopatinDTO a partir del objeto Monopatin
-        MonopatinDTO monopatinDTO = new MonopatinDTO(monopatin);
-
         // Simula que el servicio devuelve el MonopatinDTO
         when(monopatinService.findById(1L)).thenReturn(monopatin);
 
@@ -172,7 +169,7 @@ public class MonopatinControllerTest {
         MonopatinDTO monopatinDto = new MonopatinDTO();
         monopatinDto.setId(1L);
 
-        when(monopatinService.iniciarViaje(1L, 1L)).thenReturn(monopatinDto);
+        when(monopatinService.iniciarViaje("1", 1L)).thenReturn(monopatinDto);
 
         mockMvc.perform(put("/api/monopatines/reservarMonopatin/parada/1/monopatin/1/reservar"))
                 .andExpect(status().isOk())
@@ -190,7 +187,7 @@ public class MonopatinControllerTest {
     @Test
     public void testFinalizarRecorrido() throws Exception {
         Long idMonopatin = 1L;
-        Long paradaId = 2L;
+        String paradaId = "2";
         Long viajeId = 3L;
         Long kmRecorridos = 10L;
 
@@ -198,7 +195,7 @@ public class MonopatinControllerTest {
         doAnswer(invocation -> null).when(monopatinService).pararMonopatin(idMonopatin, paradaId, viajeId, kmRecorridos);
 
         mockMvc.perform(put("/api/monopatines/1/finalizarRecorrido")
-                        .param("paradaId", paradaId.toString())
+                        .param("paradaId", paradaId)
                         .param("viajeId", viajeId.toString())
                         .param("kmRecorridos", kmRecorridos.toString()))
                 .andExpect(status().isOk());

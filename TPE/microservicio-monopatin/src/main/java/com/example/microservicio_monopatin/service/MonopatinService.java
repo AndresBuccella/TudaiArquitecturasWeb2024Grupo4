@@ -106,7 +106,7 @@ public class MonopatinService {
 
     // Método para iniciar un viaje al retirar el monopatín de una parada
     @Transactional
-    public MonopatinDTO iniciarViaje(Long paradaId, Long monopatinId) {
+    public MonopatinDTO iniciarViaje(String paradaId, Long monopatinId) {
         Monopatin monopatin = monopatinRepository.findById(monopatinId)
                 .orElseThrow(() -> new RuntimeException("Monopatin no encontrado"));
 
@@ -130,7 +130,7 @@ public class MonopatinService {
 
     // Método para ubicar monopatín en una parada válida y finalizar el viaje si está en uso
     @Transactional
-    public boolean pararMonopatin(Long monopatinId, Long paradaId, Long viajeId, Long kmRecorridos) {
+    public boolean pararMonopatin(Long monopatinId, String paradaId, Long viajeId, Long kmRecorridos) {
         Monopatin monopatin = monopatinRepository.findById(monopatinId).orElse(null);
         if (monopatin != null && paradaId != null && !monopatin.getDisponible()) {
             Parada parada = paradaFeignClient.getParadaById(paradaId);
@@ -275,7 +275,7 @@ public class MonopatinService {
     public List<ReporteUsoDto> getReporteMonopatinesPorTiempoSinPausas() {
 
         try {
-            Map<Long, Long> pausasMonopatines = (Map<Long, Long>) viajeFeignClient.getPausasMonopatines().getBody();
+            Map<Long, Long> pausasMonopatines = viajeFeignClient.getPausasMonopatines().getBody();
             List<ReporteUsoDto> reportes = monopatinRepository.reporteUsoPorTiempo();
             if (reportes == null || reportes.isEmpty())
                 return Collections.emptyList();

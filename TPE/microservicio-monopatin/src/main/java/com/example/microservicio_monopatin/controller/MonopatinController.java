@@ -146,7 +146,7 @@ public class MonopatinController {
             @ApiResponse(responseCode = "404", description = "Monopatín o parada no encontrada")
     })
     @PutMapping("/reservarMonopatin/parada/{idParada}/monopatin/{idMonopatin}/reservar")
-    public ResponseEntity<?> reservarMonopatin(@PathVariable("idParada") Long idParada, @PathVariable("idMonopatin") Long idMonopatin) {
+    public ResponseEntity<?> reservarMonopatin(@PathVariable("idParada") String idParada, @PathVariable("idMonopatin") Long idMonopatin) {
         MonopatinDTO monopatin = monopatinService.iniciarViaje(idParada, idMonopatin);
         if (monopatin != null) {
             return ResponseEntity.ok(monopatin);
@@ -170,7 +170,7 @@ public class MonopatinController {
     })
     @PutMapping("/{idMonopatin}/finalizarRecorrido")
     public ResponseEntity<?> finalizarRecorrido(@PathVariable("idMonopatin") Long idMonopatin,
-                                                @RequestParam Long paradaId,
+                                                @RequestParam String paradaId,
                                                 @RequestParam Long viajeId,
                                                 @RequestParam Long kmRecorridos) {
         monopatinService.pararMonopatin(idMonopatin, paradaId, viajeId, kmRecorridos);
